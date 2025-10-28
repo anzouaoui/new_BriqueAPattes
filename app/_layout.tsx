@@ -77,6 +77,20 @@ function AuthContent() {
   );
 }
 
+function AuthInitialized({ children }: { children: React.ReactNode }) {
+  const { loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   return (
     <AuthProvider>
