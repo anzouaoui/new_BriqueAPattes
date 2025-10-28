@@ -1,14 +1,16 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, Redirect } from 'expo-router';
+import { Stack, Redirect, useRouter, usePathname } from 'expo-router';
+import { RootStackParamList } from '../src/navigation/types';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { UserProvider } from '../src/context/UserContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -24,10 +26,14 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+  const { user, loading: authLoading } = useAuth();
+  const colorScheme = useColorScheme();
   
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -40,32 +46,18 @@ function RootLayoutContent() {
     }
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
-
-  return <AuthContent />;
-}
-
-function AuthContent() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
+  if (!loaded || authLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
   // Si l'utilisateur n'est pas connecté, on redirige vers l'écran de connexion
-  if (!user) {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    );
+  // sauf si on est déjà sur une page d'authentification
+  if (!user && !pathname?.startsWith('/(auth)')) {
+    return <Redirect href="/(auth)/login" />;
   }
 
   // Si l'utilisateur est connecté, on affiche les onglets principaux
@@ -94,7 +86,9 @@ function AuthInitialized({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutContent />
+      <UserProvider>
+        <RootLayoutContent />
+      </UserProvider>
     </AuthProvider>
   );
 }
